@@ -42,15 +42,16 @@ export default async function handler(
       if (!ffmpeg.isLoaded()) await ffmpeg.load()
       ffmpeg.FS('writeFile', `${tempFileName}.mp3`, await fetchFile(buffer))
 
+      const rate = 2 ** (pitch / 12)
+
+      // todo: potentially build rubberband
       // await ffmpeg.run(
       //   '-i',
       //   `${tempFileName}.mp3`,
       //   '-filter:a',
-      //   `rubberband=pitch=${2 ** (pitch / 12)}`,
+      //   `rubberband=pitch=${rate}`,
       //   `${tempFileName}-enc.mp3`,
       // )
-
-      const rate = 2 ** (pitch / 12)
 
       await ffmpeg.run(
         '-i',
@@ -61,9 +62,8 @@ export default async function handler(
       )
 
       const file = ffmpeg.FS('readFile', `${tempFileName}-enc.mp3`)
-      // const file = ffmpeg.FS('readFile', `${tempFileName}.mp3`)
-      // await ffmpeg.FS('unlink', `${tempFileName}.mp3`)
-      // await ffmpeg.FS('unlink', `${tempFileName}-enc.mp3`)
+      await ffmpeg.FS('unlink', `${tempFileName}.mp3`)
+      await ffmpeg.FS('unlink', `${tempFileName}-enc.mp3`)
 
       res.writeHead(200, {
         'Content-Type': 'audio/mpeg',
@@ -74,8 +74,10 @@ export default async function handler(
       stream.push(null)
       return stream.pipe(res)
     })
-  } catch (e) {
-    return res.status(400).json({ message: e?.message })
+  } catch {
+    return res
+      .status(400)
+      .json({ message: 'An error occurred! Please try again later.' })
   }
 }
 
