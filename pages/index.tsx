@@ -72,9 +72,9 @@ export default function Home() {
 
   const pitchQuery = useQuery(
     ['pitch', pitch, hash(file)],
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     () => {
       const data = new FormData()
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       data.append('file', file!)
       data.append('pitch', pitch.toString())
 
@@ -85,7 +85,7 @@ export default function Home() {
         data,
         responseType: 'blob',
         onUploadProgress: (e) => setUploading(e.progress < 1),
-      }).then((res) => new File([res.data], 'file.mp3'))
+      }).then((res) => new File([res.data], 'file.mp3')) as Blob
     },
     {
       enabled: !!pitch && !!file && step === 2,
@@ -99,7 +99,7 @@ export default function Home() {
 
   return (
     <main
-      className="flex flex-col min-h-full w-full px-8 py-8 text-lg overflow-y-auto gap-4"
+      className="flex flex-col min-h-full w-full p-2 sm:p-6 md:p-8 text-lg overflow-y-auto gap-4"
       {...getRootProps()}
     >
       <input {...getInputProps()} />
@@ -109,8 +109,7 @@ export default function Home() {
             Welcome to <span className="text-sky-600">Pitcher</span>!
           </h1>
           <p className="text-base text-center text-gray-500 mt-4">
-            Pitcher is a tiny tool to transpose mp3 files. Just upload the file,
-            select the pitch, and you're set! Enjoy!
+            {`Pitcher is a tiny tool to transpose mp3 files. Just upload the file, select the pitch, and you're set! Enjoy!`}
           </p>
         </div>
 
@@ -143,7 +142,7 @@ export default function Home() {
                     setPitch(0)
                   }}
                 >
-                  <TbCornerLeftUp className="text-lg" /> Change file
+                  <TbCornerLeftUp className="text-lg shrink-0" /> Change file
                 </div>
               )}
             </>
@@ -174,7 +173,7 @@ export default function Home() {
           )}
         </Step>
         <Step icon={TbWaveSine} text="Select pitch" active={1 <= step}>
-          <div className="grid grid-cols-9 mx-auto gap-1 m-auto">
+          <div className="grid grid-cols-4 sm:grid-cols-9 mx-auto gap-1 m-auto">
             {[-4, -3, -2, -1, 0, 1, 2, 3, 4].map((value) => (
               <PitchButton
                 key={value}
@@ -234,7 +233,7 @@ export default function Home() {
           )}
         </Step>
       </div>
-      <footer className="mt-auto text-center bg-white p-2 text-base rounded-xl -mb-7 -mx-7 mt-8">
+      <footer className="mt-auto text-center bg-white p-2 text-base rounded-xl sm:-m-4 md:-m-7 !mt-8">
         Made by{' '}
         <a
           className="text-sky-600 hover:underline cursor-pointer"
@@ -254,7 +253,9 @@ const PitchButton = ({ onClick, value, active }) => {
       className={classNames(
         'flex items-center justify-center px-4 py-3 rounded-xl w-full h-full text-center text-xl font-bold transition',
         active && value ? 'bg-sky-600 text-white' : 'bg-gray-200',
-        value ? 'hover:bg-gray-300 cursor-pointer' : 'opacity-50',
+        value
+          ? 'hover:bg-gray-300 cursor-pointer'
+          : 'opacity-50 hidden sm:flex',
       )}
       onClick={() => !!value && onClick()}
     >
@@ -277,7 +278,7 @@ const Step = ({
   header?: ReactNode
 }>) => (
   <div className="bg-white rounded-2xl w-full flex flex-col">
-    <div className="flex gap-3 items-center font-bold py-3 px-4">
+    <div className="flex gap-3 items-center font-bold py-3 px-4 leading-tight">
       <div
         className={classNames(
           'flex items-center justify-center p-1.5 rounded-lg',
