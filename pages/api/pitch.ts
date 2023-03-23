@@ -16,16 +16,24 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Method not found' })
   }
-  try {
-    const parsedFile: FFile = await new Promise((resolve, reject) => {
-      const form = new Formidable.IncomingForm()
 
-      form.parse(req, (err, fields: Fields, files: Files) => {
-        if (err) return reject(err)
-        if (!files?.file || Array.isArray(files.file)) return reject()
-        resolve(files.file)
-      })
-    })
+  try {
+    const [pitch, parsedFile]: [number, FFile] = await new Promise(
+      (resolve, reject) => {
+        const form = new Formidable.IncomingForm()
+
+        form.parse(req, (err, fields: Fields, files: Files) => {
+          if (err) return reject(err)
+          if (!fields?.pitch || !files?.file || Array.isArray(files.file))
+            return reject()
+          const pitch = Number(fields.pitch)
+
+          if (!pitch || pitch < -4 || pitch > 4) return reject()
+
+          resolve([pitch, files.file])
+        })
+      },
+    )
 
     fs.readFile(parsedFile.filepath, async function (err, buffer) {
       if (err) throw err
@@ -34,11 +42,21 @@ export default async function handler(
       if (!ffmpeg.isLoaded()) await ffmpeg.load()
       ffmpeg.FS('writeFile', `${tempFileName}.mp3`, await fetchFile(buffer))
 
+      // await ffmpeg.run(
+      //   '-i',
+      //   `${tempFileName}.mp3`,
+      //   '-filter:a',
+      //   `rubberband=pitch=${2 ** (pitch / 12)}`,
+      //   `${tempFileName}-enc.mp3`,
+      // )
+
+      const rate = 2 ** (pitch / 12)
+
       await ffmpeg.run(
         '-i',
         `${tempFileName}.mp3`,
-        '-ar',
-        '44100',
+        '-af',
+        `aresample=48000,asetrate=48000*${rate},aresample=48000,atempo=1/${rate}`,
         `${tempFileName}-enc.mp3`,
       )
 

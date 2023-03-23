@@ -1,9 +1,15 @@
-import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
+import {
+  PropsWithChildren,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   TbCircleCheck,
   TbCornerLeftUp,
+  TbDownload,
   TbFolder,
-  TbRefresh,
   TbUpload,
   TbWaveSine,
 } from 'react-icons/tb'
@@ -16,6 +22,7 @@ import { useQuery } from 'react-query'
 import hash from 'object-hash'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CgSpinner } from 'react-icons/cg'
+import download from 'downloadjs'
 
 const useFileUrl = (file) => {
   const fileUrl = useMemo(() => {
@@ -31,6 +38,20 @@ const useFileUrl = (file) => {
   }, [fileUrl])
 
   return fileUrl
+}
+
+const postPitchFile = async (file: File, pitch: number): Promise<Blob> => {
+  const data = new FormData()
+  data.append('file', file)
+  data.append('pitch', pitch.toString())
+
+  return axios({
+    url: window.location.origin + '/api/pitch',
+    method: 'POST',
+    headers: { 'content-type': 'multipart/form-data' },
+    data,
+    responseType: 'blob',
+  }).then((res) => new File([res.data], 'file.mp3'))
 }
 
 export default function Home() {
@@ -64,19 +85,8 @@ export default function Home() {
 
   const pitchQuery = useQuery(
     ['pitch', pitch, hash(file)],
-    () => {
-      const data = new FormData()
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      data.append('file', file!)
-
-      return axios({
-        url: window.location.origin + '/api/pitch',
-        method: 'POST',
-        headers: { 'content-type': 'multipart/form-data' },
-        data,
-        responseType: 'blob',
-      }).then((res) => new File([res.data], 'file.mp3'))
-    },
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    () => postPitchFile(file!, pitch),
     {
       enabled: !!pitch && !!file && step === 2,
       refetchOnWindowFocus: false,
@@ -89,7 +99,7 @@ export default function Home() {
 
   return (
     <main
-      className="flex flex-col max-w-screen-lg w-full mx-auto px-8 py-12 text-lg overflow-y-auto gap-2"
+      className="flex flex-col max-w-screen-md w-full mx-auto px-8 py-12 text-lg overflow-y-auto gap-4"
       {...getRootProps()}
     >
       <input {...getInputProps()} />
@@ -105,7 +115,27 @@ export default function Home() {
         </div>
       </div>
 
-      <Step icon={TbFolder} text="Choose file" active={0 <= step}>
+      <Step
+        icon={TbFolder}
+        text="Choose file"
+        active={0 <= step}
+        header={
+          <>
+            {!!fileUrl && (
+              <div
+                className="flex text-center justify-center items-center px-4 py-2.5 -my-2 -mr-2 bg-gray-100 gap-2 text-sm font-normal rounded-xl cursor-pointer transition hover:bg-gray-200"
+                onClick={() => {
+                  setFile(null)
+                  setStep(0)
+                  setPitch(0)
+                }}
+              >
+                <TbCornerLeftUp className="text-lg" /> Change file
+              </div>
+            )}
+          </>
+        }
+      >
         {!fileUrl ? (
           <div
             onClick={open}
@@ -114,7 +144,7 @@ export default function Home() {
             <TbUpload className="text-xl" /> Upload audio
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             <div className="[&>span>button+span]:!cursor-pointer [&_svg]:!fill-gray-600 [&>span>span]:!text-gray-600 grow [&>span]:rounded-xl">
               <Player
                 src={fileUrl}
@@ -124,16 +154,7 @@ export default function Home() {
                 accent={[2, 132, 199]}
               />
             </div>
-            <div
-              className="flex text-center justify-center items-center px-3 py-1 bg-gray-200 gap-2 text-base rounded-xl cursor-pointer transition hover:bg-gray-300"
-              onClick={() => {
-                setFile(null)
-                setStep(0)
-                setPitch(0)
-              }}
-            >
-              <TbCornerLeftUp className="text-xl" /> Change audio
-            </div>
+            <div className="mx-auto text-base text-gray-500">{file?.name}</div>
           </div>
         )}
       </Step>
@@ -152,29 +173,44 @@ export default function Home() {
           ))}
         </div>
       </Step>
-      <Step icon={TbCircleCheck} text="Done!" active={2 <= step}>
+      <Step
+        icon={TbCircleCheck}
+        text="Done!"
+        active={2 <= step}
+        header={
+          <>
+            {pitchQuery.isSuccess && !!file && (
+              <div
+                className="flex text-center justify-center items-center px-4 py-2.5 -my-2 -mr-2 bg-gray-100 gap-2 text-sm font-normal rounded-xl cursor-pointer transition hover:bg-gray-200"
+                onClick={() => {
+                  download(
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    pitchQuery.data!,
+                    `${pitch} ${file?.name ?? 'sound.mp3'}`,
+                    'audio/mpeg',
+                  )
+                }}
+              >
+                <TbDownload className="text-lg" /> Download
+              </div>
+            )}
+          </>
+        }
+      >
         {pitchQuery.isLoading ? (
           <CgSpinner className="m-auto animate-spin text-3xl text-gray-400" />
         ) : (
           <>
-            <div className="flex gap-2">
-              <div className="[&>span>button+span]:!cursor-pointer [&_svg]:!fill-gray-600 [&>span>span]:!text-gray-600 grow [&>span]:rounded-xl">
-                {!!newFileUrl && (
-                  <Player
-                    src={newFileUrl}
-                    height={40}
-                    hideVolume
-                    grey={[229, 231, 235]}
-                    accent={[2, 132, 199]}
-                  />
-                )}
-              </div>
-              <div
-                className="flex text-center justify-center items-center px-3 py-1 bg-gray-200 gap-2 text-base rounded-xl cursor-pointer transition hover:bg-gray-300"
-                onClick={() => pitchQuery.refetch()}
-              >
-                <TbRefresh className="text-xl" /> Refetch
-              </div>
+            <div className="[&>span>button+span]:!cursor-pointer [&_svg]:!fill-gray-600 [&>span>span]:!text-gray-600 grow [&>span]:rounded-xl">
+              {!!newFileUrl && (
+                <Player
+                  src={newFileUrl}
+                  height={40}
+                  hideVolume
+                  grey={[229, 231, 235]}
+                  accent={[2, 132, 199]}
+                />
+              )}
             </div>
           </>
         )}
@@ -204,10 +240,12 @@ const Step = ({
   text,
   active,
   children,
+  header,
 }: PropsWithChildren<{
   icon: IconType
   text: string
   active?: boolean
+  header?: ReactNode
 }>) => (
   <div className="bg-white rounded-2xl w-full flex flex-col">
     <div className="flex gap-3 items-center font-bold py-3 px-4">
@@ -220,6 +258,8 @@ const Step = ({
         <Icon className="text-xl" />
       </div>
       {text}
+      <div className="flex-grow" />
+      {header}
     </div>
     <AnimatePresence>
       {active && (
