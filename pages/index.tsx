@@ -24,7 +24,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { CgSpinner } from 'react-icons/cg'
 import download from 'downloadjs'
 
-const useFileUrl = (file) => {
+const useFileUrl = (file: File | null) => {
   const fileUrl = useMemo(() => {
     if (!file) return null
     return URL.createObjectURL(file)
@@ -84,8 +84,8 @@ export default function Home() {
         headers: { 'content-type': 'multipart/form-data' },
         data,
         responseType: 'blob',
-        onUploadProgress: (e) => setUploading(e.progress < 1),
-      }).then((res) => new File([res.data], 'file.mp3')) as Blob
+        onUploadProgress: (e) => setUploading(!e?.progress || e.progress < 1),
+      }).then((res) => new File([res.data], 'file.mp3')) as Promise<File>
     },
     {
       enabled: !!pitch && !!file && step === 2,
@@ -95,7 +95,7 @@ export default function Home() {
       retry: 0,
     },
   )
-  const newFileUrl = useFileUrl(pitchQuery?.data)
+  const newFileUrl = useFileUrl(pitchQuery?.data || null)
 
   return (
     <main
@@ -247,7 +247,15 @@ export default function Home() {
   )
 }
 
-const PitchButton = ({ onClick, value, active }) => {
+const PitchButton = ({
+  onClick,
+  value,
+  active,
+}: {
+  onClick: () => void
+  value: number
+  active: boolean
+}) => {
   return (
     <div
       className={classNames(
