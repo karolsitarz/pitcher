@@ -1,8 +1,8 @@
 import Head from 'next/head'
 import type { AppProps } from 'next/app'
-import 'styles/globals.css'
 import { QueryClient, QueryClientProvider } from 'react-query'
-import { Component } from 'react'
+
+import 'styles/globals.css'
 
 const queryClient = new QueryClient()
 

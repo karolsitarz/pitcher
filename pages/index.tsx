@@ -1,10 +1,4 @@
-import {
-  PropsWithChildren,
-  ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { useState } from 'react'
 import {
   TbCircleCheck,
   TbCornerLeftUp,
@@ -13,32 +7,17 @@ import {
   TbUpload,
   TbWaveSine,
 } from 'react-icons/tb'
-import { IconType } from 'react-icons'
 import classNames from 'classnames'
 import { useDropzone } from 'react-dropzone'
 import { Player } from 'react-simple-player'
 import axios from 'axios'
 import { useQuery } from 'react-query'
 import hash from 'object-hash'
-import { AnimatePresence, motion } from 'framer-motion'
 import { CgSpinner } from 'react-icons/cg'
 import download from 'downloadjs'
-
-const useFileUrl = (file: File | null) => {
-  const fileUrl = useMemo(() => {
-    if (!file) return null
-    return URL.createObjectURL(file)
-  }, [file])
-
-  useEffect(() => {
-    if (!fileUrl) return
-    return () => {
-      URL.revokeObjectURL(fileUrl)
-    }
-  }, [fileUrl])
-
-  return fileUrl
-}
+import { Step } from '../components/Step'
+import { PitchButton } from '../components/PitchButton'
+import { useFileUrl } from '../hooks/useFileUrl'
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
@@ -71,11 +50,10 @@ export default function Home() {
   })
 
   const pitchQuery = useQuery(
-    ['pitch', pitch, hash(file)],
+    ['pitch', pitch, !!file && hash(file)],
     () => {
       const data = new FormData()
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      data.append('file', file!)
+      data.append('file', file || new Blob())
       data.append('pitch', pitch.toString())
 
       return axios({
@@ -198,8 +176,7 @@ export default function Home() {
                   className="flex text-center justify-center items-center px-4 py-2.5 -my-2 -mr-2 bg-gray-100 gap-2 text-sm font-normal rounded-xl cursor-pointer transition hover:bg-gray-200"
                   onClick={() => {
                     download(
-                      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                      pitchQuery.data!,
+                      pitchQuery.data,
                       `${pitch} ${file?.name ?? 'sound.mp3'}`,
                       'audio/mpeg',
                     )
@@ -233,7 +210,7 @@ export default function Home() {
           )}
         </Step>
       </div>
-      <footer className="mt-auto text-center bg-white p-2 text-base rounded-xl sm:-m-4 md:-m-7 !mt-8">
+      <footer className="text-center bg-white p-2 text-base rounded-xl sm:-m-4 md:-m-7 mt-8">
         Made by{' '}
         <a
           className="text-sky-600 hover:underline cursor-pointer"
@@ -246,71 +223,3 @@ export default function Home() {
     </main>
   )
 }
-
-const PitchButton = ({
-  onClick,
-  value,
-  active,
-}: {
-  onClick: () => void
-  value: number
-  active: boolean
-}) => {
-  return (
-    <div
-      className={classNames(
-        'flex items-center justify-center px-4 py-3 rounded-xl w-full h-full text-center text-xl font-bold transition',
-        active && value ? 'bg-sky-600 text-white' : 'bg-gray-200',
-        value
-          ? 'hover:bg-gray-300 cursor-pointer'
-          : 'opacity-50 hidden sm:flex',
-      )}
-      onClick={() => !!value && onClick()}
-    >
-      {value > 0 && '+'}
-      {value}
-    </div>
-  )
-}
-
-const Step = ({
-  icon: Icon,
-  text,
-  active,
-  children,
-  header,
-}: PropsWithChildren<{
-  icon: IconType
-  text: string
-  active?: boolean
-  header?: ReactNode
-}>) => (
-  <div className="bg-white rounded-2xl w-full flex flex-col">
-    <div className="flex gap-3 items-center font-bold py-3 px-4 leading-tight">
-      <div
-        className={classNames(
-          'flex items-center justify-center p-1.5 rounded-lg',
-          active ? 'bg-sky-600 text-white' : 'bg-sky-200 text-sky-600',
-        )}
-      >
-        <Icon className="text-xl" />
-      </div>
-      {text}
-      <div className="flex-grow" />
-      {header}
-    </div>
-    <AnimatePresence>
-      {active && (
-        <motion.div
-          className="flex flex-col overflow-hidden"
-          initial={{ height: 0 }}
-          animate={{ height: 'auto' }}
-          exit={{ height: 0 }}
-        >
-          <div className="border-b-2 border-gray-100" />
-          <div className="p-4 flex flex-col">{children}</div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </div>
-)
